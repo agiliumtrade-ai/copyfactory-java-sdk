@@ -1,3 +1,6 @@
+1.1.1
+  - Fixed CopyFactory constructor without additional options
+
 1.1.0
   - Added API to retrieve account / strategy / portfolio strategy by id
 

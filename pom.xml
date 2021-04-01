@@ -4,7 +4,7 @@
 
   <groupId>cloud.metaapi.sdk</groupId>
   <artifactId>copyfactory-java-sdk</artifactId>
-  <version>1.1.0</version>
+  <version>1.1.1</version>
   <packaging>jar</packaging>
 
   <name>${project.groupId}:${project.artifactId}</name>
@@ -210,10 +210,10 @@
       <artifactId>commons-io</artifactId>
       <version>2.7</version>
     </dependency>
-	  <dependency>
-	  <groupId>io.github.cdimascio</groupId>
-	  <artifactId>java-dotenv</artifactId>
-	  <version>5.2.2</version>
-	</dependency>
+    <dependency>
+      <groupId>io.github.cdimascio</groupId>
+      <artifactId>java-dotenv</artifactId>
+      <version>5.2.2</version>
+    </dependency>
   </dependencies>
 </project>
