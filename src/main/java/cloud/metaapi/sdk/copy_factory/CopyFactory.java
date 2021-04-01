@@ -10,77 +10,74 @@ import cloud.metaapi.sdk.clients.copy_factory.TradingClient;
  * MetaApi CopyFactory copy trading API SDK
  */
 public class CopyFactory {
-    
-    private ConfigurationClient configurationClient;
-    private HistoryClient historyClient;
-    private TradingClient tradingClient;
-    
+  
+  private ConfigurationClient configurationClient;
+  private HistoryClient historyClient;
+  private TradingClient tradingClient;
+  
+  /**
+   * CopyFactory options
+   */
+  public static class Options {
     /**
-     * CopyFactory options
+     * Domain to connect to
      */
-    public static class Options {
-        /**
-         * Domain to connect to, or {@code null}
-         */
-        public String domain;
-        /**
-         * Timeout for http requests in seconds, or {@code null}
-         */
-        public Integer requestTimeout;
-        /**
-         * Timeout for connecting to server in seconds, or {@code null}
-         */
-        public Integer connectTimeout;
-        /**
-         * Retry options
-         */
-        public RetryOptions retryOpts = new RetryOptions();
-    }
-    
+    public String domain = "agiliumtrade.agiliumtrade.ai";
     /**
-     * Constructs CopyFactory class instance with default options
-     * @param token authorization token
+     * Timeout for http requests in seconds
      */
-    public CopyFactory(String token) {
-        this(token, null);
-    }
-    
+    public int requestTimeout = 60;
     /**
-     * Constructs CopyFactory class instance
-     * @param token authorization token
-     * @param opts connection options, or {@code null}
+     * Timeout for connecting to server in seconds
      */
-    public CopyFactory(String token, Options opts) {
-        String domain = opts != null && opts.domain != null ? opts.domain : "agiliumtrade.agiliumtrade.ai";
-        int requestTimeout = opts != null && opts.requestTimeout != null ? opts.requestTimeout : 60;
-        int connectTimeout = opts != null && opts.connectTimeout != null ? opts.connectTimeout : 60;
-        HttpClient httpClient = new HttpClient(requestTimeout * 1000, connectTimeout * 1000, opts.retryOpts);
-        configurationClient = new ConfigurationClient(httpClient, token, domain);
-        historyClient = new HistoryClient(httpClient, token, domain);
-        tradingClient = new TradingClient(httpClient, token, domain);
-    }
-    
+    public int connectTimeout = 60;
     /**
-     * Returns CopyFactory configuration API
-     * @return configuration API
+     * Retry options
      */
-    public ConfigurationClient getConfigurationApi() {
-        return configurationClient;
-    }
-    
-    /**
-     * Returns CopyFactory history API
-     * @return history API
-     */
-    public HistoryClient getHistoryApi() {
-        return historyClient;
-    }
-    
-    /**
-     * Returns CopyFactory trading API
-     * @return trading API
-     */
-    public TradingClient getTradingApi() {
-        return tradingClient;
-    }
+    public RetryOptions retryOpts = new RetryOptions();
+  }
+  
+  /**
+   * Constructs CopyFactory class instance with default options
+   * @param token authorization token
+   */
+  public CopyFactory(String token) {
+    this(token, new Options());
+  }
+  
+  /**
+   * Constructs CopyFactory class instance
+   * @param token authorization token
+   * @param opts connection options
+   */
+  public CopyFactory(String token, Options opts) {
+    HttpClient httpClient = new HttpClient(opts.requestTimeout * 1000, opts.connectTimeout * 1000, opts.retryOpts);
+    configurationClient = new ConfigurationClient(httpClient, token, opts.domain);
+    historyClient = new HistoryClient(httpClient, token, opts.domain);
+    tradingClient = new TradingClient(httpClient, token, opts.domain);
+  }
+  
+  /**
+   * Returns CopyFactory configuration API
+   * @return configuration API
+   */
+  public ConfigurationClient getConfigurationApi() {
+    return configurationClient;
+  }
+  
+  /**
+   * Returns CopyFactory history API
+   * @return history API
+   */
+  public HistoryClient getHistoryApi() {
+    return historyClient;
+  }
+  
+  /**
+   * Returns CopyFactory trading API
+   * @return trading API
+   */
+  public TradingClient getTradingApi() {
+    return tradingClient;
+  }
 }
