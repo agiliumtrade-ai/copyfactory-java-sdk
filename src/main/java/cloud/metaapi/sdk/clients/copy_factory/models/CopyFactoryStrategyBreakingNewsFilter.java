@@ -12,7 +12,7 @@ public class CopyFactoryStrategyBreakingNewsFilter {
      */
     public List<String> priorities;
     /**
-     * Optional time interval specifying when to force close an already open position before calendar news,
+     * Optional time interval specifying when to force close an already open position after breaking news,
      * or {@code null}. Default value is 60 minutes
      */
     public Integer closePositionTimeGapInMinutes;

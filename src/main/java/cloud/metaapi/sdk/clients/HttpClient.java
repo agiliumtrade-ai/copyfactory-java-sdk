@@ -1,7 +1,9 @@
 package cloud.metaapi.sdk.clients;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -28,8 +30,8 @@ public class HttpClient {
   private int requestTimeout;
   private int connectTimeout;
   private int retries;
-  private int minRetryDelayInSeconds;
-  private int maxRetryDelayInSeconds;
+  private int minRetryDelay;
+  private int maxRetryDelay;
   
   /**
    * Constructs HttpClient class instance. Connect and request timeout are {@code 1 minute} each.
@@ -57,8 +59,8 @@ public class HttpClient {
     this.requestTimeout = requestTimeout;
     this.connectTimeout = connectTimeout;
     this.retries = retryOpts.retries;
-    this.minRetryDelayInSeconds = retryOpts.minDelayInSeconds;
-    this.maxRetryDelayInSeconds = retryOpts.maxDelayInSeconds;
+    this.minRetryDelay = retryOpts.minDelayInSeconds * 1000;
+    this.maxRetryDelay = retryOpts.maxDelayInSeconds * 1000;
   }
   
   /**
@@ -79,7 +81,8 @@ public class HttpClient {
    * @return completable future with request results
    */
   public CompletableFuture<String> request(HttpRequestOptions options, int retryCounter) {
-    return makeCheckedRequest(options, retryCounter).thenApply(response -> response.getBody());
+    return makeCheckedRequest(options, retryCounter, Date.from(Instant.now().plusMillis(
+      maxRetryDelay * retries)).getTime()).thenApply(response -> response.getBody());
   }
   
   /**
@@ -120,29 +123,64 @@ public class HttpClient {
    * @param retryCounter retry counter
    * @return completable future with request response
    */
-  protected CompletableFuture<HttpResponse<String>> makeCheckedRequest(HttpRequestOptions options, int retryCounter) {
+  protected CompletableFuture<HttpResponse<String>> makeCheckedRequest(
+    HttpRequestOptions options, int retryCounter, long endTime) {
     return this.makeRequest(options).handle((response, error) -> {
+      int localRetryCounter = retryCounter;
+      int retryAfterSeconds = 0;
+      if (response != null && response.getStatus() == 202) {
+        retryAfterSeconds = Integer.valueOf(response.getHeaders().getFirst("retry-after"));
+      }
+      error = (error != null
+        ? new ApiException(error.getMessage(), 0, error.getCause())
+        : checkHttpError(response));
+      if (error != null) {
+        localRetryCounter = handleError(error, localRetryCounter, endTime).join();
+        return makeCheckedRequest(options, localRetryCounter, endTime).join();
+      }
+      if (retryAfterSeconds != 0) {
+        handleRetry(endTime, retryAfterSeconds * 1000).join();
+        response = makeCheckedRequest(options, localRetryCounter, endTime).join();
+      }
+      return response;
+    });
+  }
+  
+  private CompletableFuture<Void> handleRetry(long endTime, int retryAfter) {
+    return CompletableFuture.runAsync(() -> {
+      if (endTime > Date.from(Instant.now().plusMillis(retryAfter)).getTime()) {
+        try {
+          Thread.sleep(retryAfter);
+        } catch (InterruptedException e) {
+          throw new CompletionException(e);
+        }
+      } else {
+        throw new CompletionException(new TimeoutException(
+          "Timed out waiting for the end of the process of calculating metrics"));
+      }
+    });
+  }
+  
+  private CompletableFuture<Integer> handleError(Throwable error, int retryCounter, long endTime) {
+    return CompletableFuture.supplyAsync(() -> {
       try {
-        error = (error != null ? new ApiException(error.getMessage(), 0, error.getCause()) : checkHttpError(response));
-      } catch (JsonProcessingException e) {
+        if (Arrays.asList(ConflictException.class, InternalException.class, ApiException.class)
+          .indexOf(error.getClass()) != - 1 && retryCounter < retries) {
+          int pause = (int) Math.min(Math.pow(2, retryCounter) * minRetryDelay, maxRetryDelay);
+            Thread.sleep(pause);
+          return retryCounter + 1;
+        } else if (error instanceof TooManyRequestsException) {
+          long retryTime = ((TooManyRequestsException) error).metadata.recommendedRetryTime
+            .getDate().getTime();
+          if (retryTime < endTime) {
+            Thread.sleep(retryTime - Date.from(Instant.now()).getTime());
+            return retryCounter;
+          }
+        }
+      } catch (InterruptedException e) {
         throw new CompletionException(e);
       }
-      if (error == null) {
-        return response;
-      } else {
-        if (Arrays.asList(ConflictException.class, InternalException.class,
-          ApiException.class).indexOf(error.getClass()) != - 1 && retryCounter < retries) {
-          try {
-            Thread.sleep((long) (Math.min(Math.pow(2, retryCounter) * minRetryDelayInSeconds,
-              maxRetryDelayInSeconds) * 1000));
-          } catch (InterruptedException e) {
-            throw new CompletionException(e);
-          }
-          return makeCheckedRequest(options, retryCounter + 1).join();
-        } else {
-          throw new CompletionException(error);
-        }
-      }
+      throw new CompletionException(error);
     });
   }
   
@@ -200,35 +238,41 @@ public class HttpClient {
     });
   }
   
-  private ApiException checkHttpError(HttpResponse<String> response) throws JsonProcessingException {
-    int statusType = response.getStatus() / 100;
-    if (statusType != 4 && statusType != 5) return null;
-    Error error;
+  private ApiException checkHttpError(HttpResponse<String> response) {
     try {
-      error = JsonMapper.getInstance().readValue(response.getBody(), Error.class);
-    } catch (JsonProcessingException e) {
-      error = null;
-    }
-    switch (response.getStatus()) {
-      case 400: return new ValidationException(
-        error != null ? error.message : response.getStatusText(),
-        error != null && error.details != null ? JsonMapper.getInstance().treeToValue(error.details,
-          Object.class) : null
-      );
-      case 401: return new UnauthorizedException(error != null ? error.message : response.getStatusText());
-      case 403: return new ForbiddenException(error != null ? error.message : response.getStatusText());
-      case 404: return new NotFoundException(error != null ? error.message : response.getStatusText());
-      case 409: return new ConflictException(error != null ? error.message : response.getStatusText());
-      case 429: return new TooManyRequestsException(
-        error != null ? error.message : response.getStatusText(),
-        error != null && error.metadata != null ? JsonMapper.getInstance().treeToValue(error.metadata,
-          TooManyRequestsExceptionMetadata.class) : null
-      );
-      case 500: return new InternalException(error != null ? error.message : response.getStatusText());
-      default: return new ApiException(
-        error != null ? error.message : response.getStatusText(),
-        response.getStatus()
-      );
+      int statusType = response.getStatus() / 100;
+      if (statusType != 4 && statusType != 5) {
+        return null;
+      }
+      Error error;
+      try {
+        error = JsonMapper.getInstance().readValue(response.getBody(), Error.class);
+      } catch (JsonProcessingException e) {
+        error = null;
+      }
+      switch (response.getStatus()) {
+        case 400: return new ValidationException(
+          error != null ? error.message : response.getStatusText(),
+          error != null && error.details != null ? JsonMapper.getInstance().treeToValue(error.details,
+            Object.class) : null
+        );
+        case 401: return new UnauthorizedException(error != null ? error.message : response.getStatusText());
+        case 403: return new ForbiddenException(error != null ? error.message : response.getStatusText());
+        case 404: return new NotFoundException(error != null ? error.message : response.getStatusText());
+        case 409: return new ConflictException(error != null ? error.message : response.getStatusText());
+        case 429: return new TooManyRequestsException(
+          error != null ? error.message : response.getStatusText(),
+          error != null && error.metadata != null ? JsonMapper.getInstance().treeToValue(error.metadata,
+            TooManyRequestsExceptionMetadata.class) : null
+        );
+        case 500: return new InternalException(error != null ? error.message : response.getStatusText());
+        default: return new ApiException(
+          error != null ? error.message : response.getStatusText(),
+          response.getStatus()
+        );
+      }
+    } catch (JsonProcessingException err) {
+      return new ApiException(err.getMessage(), 0, err.getCause());
     }
   }
 }

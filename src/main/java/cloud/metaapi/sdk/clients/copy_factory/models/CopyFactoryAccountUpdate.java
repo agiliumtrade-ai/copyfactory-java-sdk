@@ -53,6 +53,24 @@ public class CopyFactoryAccountUpdate {
      */
     public Double maxLeverage;
     /**
+     * Flag indicating whether stop loss should be copied. Default ({@code null}) is to copy stop loss
+     */
+    public Boolean copyStopLoss;
+    /**
+     * Flag indicating whether take profit should be copied. Default ({@code null}) is to copy take profit
+     */
+    public Boolean copyTakeProfit;
+    /**
+     * Minimum trade volume to copy, or {@code null}.
+     * Trade signals with a smaller volume will not be copied
+     */
+    public Double minTradeVolume;
+    /**
+     * Maximum trade volume to copy, or {@code null}.
+     * Trade signals with a larger volume will be copied with maximum volume instead
+     */
+    public Double maxTradeVolume;
+    /**
      * Strategy subscriptions
      */
     public List<CopyFactoryStrategySubscription> subscriptions;

@@ -68,9 +68,26 @@ public class CopyFactoryPortfolioMember {
      */
     public List<CopyFactoryStrategySymbolMapping> symbolMapping;
     /**
-     * If set to balance, the trade size on strategy subscriber will be scaled according to balance to preserve
-     * risk. If value is none, than trade size will be preserved irregardless of the subscriber balance. If value
-     * is contractSize, then trade size will be scaled according to contract size. Default ({@code null}) is balance.
+     * Trade size scaling settings, or {@code null}. By default the trade size on strategy
+     * subscriber side will be scaled according to balance to preserve risk.
      */
-    public String tradeSizeScalingMode;
+    public CopyFactoryStrategyTradeSizeScaling tradeSizeScaling;
+    /**
+     * Flag indicating whether stop loss should be copied. Default ({@code null}) is to copy stop loss
+     */
+    public Boolean copyStopLoss;
+    /**
+     * Flag indicating whether take profit should be copied. Default ({@code null}) is to copy take profit
+     */
+    public Boolean copyTakeProfit;
+    /**
+     * Minimum trade volume to copy, or {@code null}.
+     * Trade signals with a smaller volume will not be copied
+     */
+    public Double minTradeVolume;
+    /**
+     * Maximum trade volume to copy, or {@code null}.
+     * Trade signals with a larger volume will be copied with maximum volume instead
+     */
+    public Double maxTradeVolume;
 }
