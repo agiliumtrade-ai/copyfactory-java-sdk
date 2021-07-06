@@ -47,27 +47,34 @@ Features supported:
 
 Please note that trade copying to MT5 netting accounts is not supported in the current API version
 
+Please check Features section of the [https://metaapi.cloud/docs/copyfactory/](https://metaapi.cloud/docs/copyfactory/) documentation for detailed description of all settings you can make
+
 ## REST API documentation
 CopyFactory SDK is built on top of CopyFactory REST API.
 
 CopyFactory REST API docs are available at [https://metaapi.cloud/docs/copyfactory/](https://metaapi.cloud/docs/copyfactory/)
+
+## FAQ
+Please check this page for FAQ: [https://metaapi.cloud/docs/copyfactory/faq/](https://metaapi.cloud/docs/copyfactory/faq/).
 
 ## Installation
 If you use Apache Maven, add this to `<dependencies>` in your `pom.xml`:
 ```xml
 <dependency>
   <groupId>cloud.metaapi.sdk</groupId>
-  <artifactId>copyfactory-java-sdk</artifactId>
-  <version>1.1.0</version>
+  <artifactId>metaapi-java-sdk</artifactId>
+  <version>12.4.0</version>
 </dependency>
 ```
+
+Other options can be found on [this page](https://search.maven.org/artifact/cloud.metaapi.sdk/metaapi-java-sdk/12.4.0/jar).
 
 ## Code examples
 We published some code examples in our github repository, namely:
 
 - Java: [https://github.com/agiliumtrade-ai/copyfactory-java-sdk/tree/master/examples](https://github.com/agiliumtrade-ai/copyfactory-java-sdk/tree/master/examples)
 
-Other options can be found on [this page](https://search.maven.org/artifact/cloud.metaapi.sdk/copyfactory-java-sdk/1.1.0/jar).
+Other options can be found on [this page](https://search.maven.org/artifact/cloud.metaapi.sdk/copyfactory-java-sdk/2.1.0/jar).
 
 ### Running Java SDK examples
 In order to run Java SDK examples, follow these steps:
@@ -91,8 +98,8 @@ In order to configure trade copying you need to:
 - subscribe slave CopyFactory accounts to the strategy
 
 ```java
-import cloud.metaapi.sdk.metaApi.MetaApi;
-import cloud.metaapi.sdk.copyFactory.CopyFactory;
+import cloud.metaapi.sdk.meta_api.MetaApi;
+import cloud.metaapi.sdk.copy_factory.CopyFactory;
 
 String token = "...";
 MetaApi metaapi = new MetaApi(token);
@@ -214,10 +221,12 @@ System.out.println(tradingApi.getUserLog(accountId, from, null, 20, 10).get());
 System.out.println(tradingApi.getUserLog(accountId, from, null, 20, 10).get());
 ```
 
+
 ## Related projects:
-See our website for the full list of APIs and features supported [https://metaapi.cloud/#features](https://metaapi.cloud/#features)
+Take a look at our website for the full list of APIs and features supported [https://metaapi.cloud/#features](https://metaapi.cloud/#features)
 
-Some of the APIs you might decide to use together with this module:
+Some of the APIs you might decide to use together with MetaStats API are:
 
-1. MetaApi cloud forex trading API [https://metaapi.cloud/docs/client/](https://metaapi.cloud/docs/client/)
-2. MetaStats cloud forex trading statistics API [https://metaapi.cloud/docs/metastats/](https://metaapi.cloud/docs/metastats/)
+1. MetaApi cloud forex API [https://metaapi.cloud/docs/client/](https://metaapi.cloud/docs/client/)
+2. MetaTrader account management API [https://metaapi.cloud/docs/provisioning/](https://metaapi.cloud/docs/provisioning/)
+3. MetaStats forex trading metrics API [https://metaapi.cloud/docs/metastats/](https://metaapi.cloud/docs/metastats/)

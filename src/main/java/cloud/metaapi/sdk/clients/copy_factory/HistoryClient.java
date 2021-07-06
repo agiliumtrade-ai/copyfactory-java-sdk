@@ -98,9 +98,8 @@ public class HistoryClient extends MetaApiClient {
    * @return completable future resolving with transactions found
    */
   public CompletableFuture<List<CopyFactoryTransaction>> getProvidedStrategiesTransactions(
-    IsoTime from, IsoTime till
-  ) {
-    return getProvidedStrategiesTransactions(from, till, null, null, null, null);
+    IsoTime from, IsoTime till) {
+    return getProvidedStrategiesTransactions(from, till, null, null, null, null, null);
   }
   
   /**
@@ -110,13 +109,13 @@ public class HistoryClient extends MetaApiClient {
    * @param from time to load transactions from
    * @param till time to load transactions till
    * @param strategyIds optional list of strategy ids to filter transactions by, or {@code null}
+   * @param accountIds the list of CopyFactory subscriber account id (64-character long) to filter by, or {@code null}
    * @param subscriberIds optional list of subscribers to filter transactions by, or {@code null}
    * @return completable future resolving with transactions found
    */
   public CompletableFuture<List<CopyFactoryTransaction>> getProvidedStrategiesTransactions(
-    IsoTime from, IsoTime till, List<String> strategyIds, List<String> subscriberIds
-  ) {
-    return getProvidedStrategiesTransactions(from, till, strategyIds, subscriberIds, null, null);
+    IsoTime from, IsoTime till, List<String> strategyIds, List<String> accountIds, List<String> subscriberIds) {
+    return getProvidedStrategiesTransactions(from, till, strategyIds, accountIds, subscriberIds, null, null);
   }
   
   /**
@@ -125,14 +124,15 @@ public class HistoryClient extends MetaApiClient {
    * @param from time to load transactions from
    * @param till time to load transactions till
    * @param strategyIds optional list of strategy ids to filter transactions by, or {@code null}
+   * @param accountIds the list of CopyFactory subscriber account id (64-character long) to filter by, or {@code null}
    * @param subscriberIds optional list of subscribers to filter transactions by, or {@code null}
    * @param offset pagination offset, or {@code null}. Default value is 0
    * @param limit pagination limit, or {@code null}. Default value is 1000
    * @return completable future resolving with transactions found
    */
   public CompletableFuture<List<CopyFactoryTransaction>> getProvidedStrategiesTransactions(
-    IsoTime from, IsoTime till, List<String> strategyIds, List<String> subscriberIds, Integer offset, Integer limit
-  ) {
+    IsoTime from, IsoTime till, List<String> strategyIds, List<String> accountIds,
+    List<String> subscriberIds, Integer offset, Integer limit) {
     if (isNotJwtToken()) return handleNoAccessError("getProvidedStrategiesTransactions");
     HttpRequestOptions opts = new HttpRequestOptions(
       host + "/users/current/provided-strategies/transactions", Method.GET);
@@ -141,6 +141,8 @@ public class HistoryClient extends MetaApiClient {
     opts.getQueryParameters().put("till", till);
     if (strategyIds != null && !strategyIds.isEmpty())
       opts.getQueryParameters().put("strategyId", strategyIds);
+    if (accountIds != null && !accountIds.isEmpty())
+      opts.getQueryParameters().put("accountId", accountIds);
     if (subscriberIds != null && !subscriberIds.isEmpty())
       opts.getQueryParameters().put("subscriberId", subscriberIds);
     if (offset != null) opts.getQueryParameters().put("offset", offset);
@@ -158,9 +160,8 @@ public class HistoryClient extends MetaApiClient {
    * @return completable future resolving with transactions found
    */
   public CompletableFuture<List<CopyFactoryTransaction>> getStrategiesSubscribedTransactions(
-    IsoTime from, IsoTime till
-  ) {
-    return getStrategiesSubscribedTransactions(from, till, null, null, null, null);
+    IsoTime from, IsoTime till) {
+    return getStrategiesSubscribedTransactions(from, till, null, null, null, null, null);
   }
   
   /**
@@ -170,13 +171,13 @@ public class HistoryClient extends MetaApiClient {
    * @param from time to load transactions from
    * @param till time to load transactions till
    * @param strategyIds optional list of strategy ids to filter transactions by, or {@code null}
+   * @param accountIds the list of CopyFactory subscriber account id (64-character long) to filter by, or {@code null}
    * @param providerIds optional list of providers to filter transactions by, or {@code null}
    * @return completable future resolving with transactions found
    */
   public CompletableFuture<List<CopyFactoryTransaction>> getStrategiesSubscribedTransactions(
-    IsoTime from, IsoTime till, List<String> strategyIds, List<String> providerIds
-  ) {
-    return getStrategiesSubscribedTransactions(from, till, strategyIds, providerIds, null, null);
+    IsoTime from, IsoTime till, List<String> strategyIds, List<String> accountIds, List<String> providerIds) {
+    return getStrategiesSubscribedTransactions(from, till, strategyIds, accountIds, providerIds, null, null);
   }
   
   /**
@@ -185,14 +186,15 @@ public class HistoryClient extends MetaApiClient {
    * @param from time to load transactions from
    * @param till time to load transactions till
    * @param strategyIds optional list of strategy ids to filter transactions by, or {@code null}
+   * @param accountIds the list of CopyFactory subscriber account id (64-character long) to filter by, or {@code null}
    * @param providerIds optional list of providers to filter transactions by, or {@code null}
    * @param offset pagination offset, or {@code null}. Default value is 0
    * @param limit pagination limit, or {@code null}. Default value is 1000
    * @return completable future resolving with transactions found
    */
   public CompletableFuture<List<CopyFactoryTransaction>> getStrategiesSubscribedTransactions(
-    IsoTime from, IsoTime till, List<String> strategyIds, List<String> providerIds, Integer offset, Integer limit
-  ) {
+    IsoTime from, IsoTime till, List<String> strategyIds, List<String> accountIds,
+    List<String> providerIds, Integer offset, Integer limit) {
     if (isNotJwtToken()) return handleNoAccessError("getStrategiesSubscribedTransactions");
     HttpRequestOptions opts = new HttpRequestOptions(
       host + "/users/current/strategies-subscribed/transactions", Method.GET);
@@ -201,6 +203,8 @@ public class HistoryClient extends MetaApiClient {
     opts.getQueryParameters().put("till", till);
     if (strategyIds != null && !strategyIds.isEmpty())
       opts.getQueryParameters().put("strategyId", strategyIds);
+    if (accountIds != null && !accountIds.isEmpty())
+      opts.getQueryParameters().put("accountId", accountIds);
     if (providerIds != null && !providerIds.isEmpty())
       opts.getQueryParameters().put("providerId", providerIds);
     if (offset != null) opts.getQueryParameters().put("offset", offset);

@@ -8,16 +8,21 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import cloud.metaapi.sdk.clients.HttpRequestOptions.Method;
 import cloud.metaapi.sdk.clients.error_handler.*;
 import cloud.metaapi.sdk.clients.mocks.HttpClientMock;
 import cloud.metaapi.sdk.clients.models.IsoTime;
+import cloud.metaapi.sdk.util.JsonMapper;
+import kong.unirest.Headers;
 import kong.unirest.HttpResponse;
 import kong.unirest.UnirestException;
 
 import java.net.SocketTimeoutException;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -43,6 +48,7 @@ class JsonModelExample {
 public class HttpClientTest {
 
   private HttpClient httpClient;
+  private HttpRequestOptions requestOpts = new HttpRequestOptions("http://metaapi.cloud", Method.GET);
   
   @BeforeEach
   public void setUp() {
@@ -111,10 +117,9 @@ public class HttpClientTest {
   @Test
   public void testReturnsTimeoutExceptionIfRequestIsTimedOut() {
     httpClient = new HttpClient(1, 60000, new RetryOptions() {{ retries = 2; }});
-    HttpRequestOptions opts = new HttpRequestOptions("http://metaapi.cloud", Method.GET);
     assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
       try {
-        httpClient.request(opts).get();
+        httpClient.request(requestOpts).get();
       } catch (ExecutionException e) {
         assertTrue(e.getCause() instanceof ApiException);
         assertTrue(e.getCause().getCause() instanceof UnirestException);
@@ -127,18 +132,34 @@ public class HttpClientTest {
    * Tests {@link HttpClient#request(HttpRequestOptions)}
    */
   @Test
-  @SuppressWarnings("unchecked")
-  public void testRetriesRequestOnFail() {
+  public void testRetriesRequestOnFailWithApiError() {
     CompletableFuture<HttpResponse<String>> httpErrorResponse = new CompletableFuture<>();
-    httpErrorResponse.completeExceptionally(new UnirestException(new SocketTimeoutException()));
-    HttpResponse<String> httpOkResponse = (HttpResponse<String>) Mockito.mock(HttpResponse.class);
-    Mockito.when(httpOkResponse.getStatus()).thenReturn(200);
-    Mockito.when(httpOkResponse.getBody()).thenReturn("response");
+    httpErrorResponse.completeExceptionally(new Exception("test"));
+    HttpResponse<String> httpOkResponse = getHttpOkResponse();
     httpClient = Mockito.spy(HttpClient.class);
     Mockito.when(httpClient.makeRequest(Mockito.any()))
       .thenReturn(httpErrorResponse).thenReturn(httpErrorResponse)
       .thenReturn(CompletableFuture.completedFuture(httpOkResponse));
-    String body = httpClient.request(new HttpRequestOptions("http://metaapi.cloud", Method.GET)).join();
+    String body = httpClient.request(requestOpts).join();
+    assertEquals("response", body);
+  }
+  
+  /**
+   * Tests {@link HttpClient#request(HttpRequestOptions)}
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testRetriesRequestOnFailWithInternalError() {
+    HttpResponse<String> httpErrorResponse = (HttpResponse<String>) Mockito.mock(HttpResponse.class);
+    Mockito.when(httpErrorResponse.getStatus()).thenReturn(500);
+    Mockito.when(httpErrorResponse.getBody()).thenReturn("Internal error");
+    HttpResponse<String> httpOkResponse = getHttpOkResponse();
+    httpClient = Mockito.spy(HttpClient.class);
+    Mockito.when(httpClient.makeRequest(Mockito.any()))
+      .thenReturn(CompletableFuture.completedFuture(httpErrorResponse))
+      .thenReturn(CompletableFuture.completedFuture(httpErrorResponse))
+      .thenReturn(CompletableFuture.completedFuture(httpOkResponse));
+    String body = httpClient.request(requestOpts).join();
     assertEquals("response", body);
   }
   
@@ -155,7 +176,7 @@ public class HttpClientTest {
     Mockito.when(httpClient.makeRequest(Mockito.any())).thenReturn(CompletableFuture.completedFuture(httpResponse));
     assertThrows(CompletionException.class, () -> {
       try {
-        httpClient.request(new HttpRequestOptions("http://metaapi.cloud", Method.GET)).join();
+        httpClient.request(requestOpts).join();
       } catch (CompletionException e) {
         assertTrue(e.getCause() instanceof ApiException);
         assertEquals("test", e.getCause().getMessage());
@@ -169,51 +190,172 @@ public class HttpClientTest {
    */
   @Test
   @SuppressWarnings("unchecked")
-  public void testDoesNotRetryIfErrorNotSpecified() {
-    HttpResponse<String> httpResponse = (HttpResponse<String>) Mockito.mock(HttpResponse.class);
-    Mockito.when(httpResponse.getStatus()).thenReturn(400);
-    Mockito.when(httpResponse.getBody()).thenReturn("{\"message\": \"test\"}");
+  public void testDoesNotRetryIfErrorIsNeitherInternalErrorNorApiError() {
+    HttpResponse<String> httpErrorResponse = (HttpResponse<String>) Mockito.mock(HttpResponse.class);
+    Mockito.when(httpErrorResponse.getStatus()).thenReturn(400);
+    Mockito.when(httpErrorResponse.getBody()).thenReturn("{\"message\": \"test\"}");
+    HttpResponse<String> httpOkResponse = getHttpOkResponse();
     httpClient = Mockito.spy(HttpClient.class);
-    Mockito.when(httpClient.makeRequest(Mockito.any())).thenReturn(CompletableFuture.completedFuture(httpResponse));
+    Mockito.when(httpClient.makeRequest(Mockito.any()))
+      .thenReturn(CompletableFuture.completedFuture(httpErrorResponse))
+      .thenReturn(CompletableFuture.completedFuture(httpErrorResponse))
+      .thenReturn(CompletableFuture.completedFuture(httpOkResponse));
     assertThrows(CompletionException.class, () -> {
       try {
-        httpClient.request(new HttpRequestOptions("http://metaapi.cloud", Method.GET)).join();
+        httpClient.request(requestOpts).join();
       } catch (CompletionException e) {
         assertTrue(e.getCause() instanceof ValidationException);
         assertEquals("test", e.getCause().getMessage());
         throw e;
       }
     });
+    Mockito.verify(httpClient, Mockito.times(1)).makeRequest(Mockito.any());
+  }
+  
+  @SuppressWarnings("unchecked")
+  HttpResponse<String> getTooManyRequestsError(int sec) {
+    HttpResponse<String> httpResponse = (HttpResponse<String>) Mockito.mock(HttpResponse.class);
+    ObjectNode error = JsonMapper.getInstance().createObjectNode();
+    error.put("error", "TooManyRequestsError");
+    error.put("message", "test");
+    ObjectNode metadata = JsonMapper.getInstance().createObjectNode();
+    metadata.set("recommendedRetryTime", JsonMapper.getInstance()
+      .valueToTree(new IsoTime(Date.from(Instant.now().plusSeconds(sec)))));
+    error.set("metadata", metadata);
+    Mockito.when(httpResponse.getStatus()).thenReturn(429);
+    Mockito.when(httpResponse.getBody()).thenReturn(error.toString());
+    return httpResponse;
+  }
+  
+  @SuppressWarnings("unchecked")
+  HttpResponse<String> getHttpOkResponse() {
+    HttpResponse<String> httpOkResponse = (HttpResponse<String>) Mockito.mock(HttpResponse.class);
+    Mockito.when(httpOkResponse.getStatus()).thenReturn(200);
+    Mockito.when(httpOkResponse.getBody()).thenReturn("response");
+    return httpOkResponse;
   }
   
   /**
    * Tests {@link HttpClient#request(HttpRequestOptions)}
    */
   @Test
-  @SuppressWarnings("unchecked")
-  public void testParsesTooManyRequestsErrorMetadata() {
-    HttpResponse<String> httpResponse = (HttpResponse<String>) Mockito.mock(HttpResponse.class);
-    Mockito.when(httpResponse.getStatus()).thenReturn(429);
-    Mockito.when(httpResponse.getBody()).thenReturn("{\"id\": 1, \"error\": \"TooManyRequestsException\", "
-        + "\"message\": \"test\", \"metadata\": {\"periodInMinutes\": 5, \"requestsPerPeriodAllowed\": 10, "
-        + "\"recommendedRetryTime\": \"2020-04-15T02:45:06.521Z\"}}");
+  public void testRetriesRequestAfterWaitingOnFailWithTooManyRequestsError() {
+    HttpResponse<String> httpErrorResponse1 = getTooManyRequestsError(2);
+    HttpResponse<String> httpErrorResponse2 = getTooManyRequestsError(3);
+    HttpResponse<String> httpOkResponse = getHttpOkResponse();
     httpClient = Mockito.spy(HttpClient.class);
-    Mockito.when(httpClient.makeRequest(Mockito.any())).thenReturn(CompletableFuture.completedFuture(httpResponse));
-    assertThrows(CompletionException.class, () -> {
-      try {
-        httpClient.request(new HttpRequestOptions("http://metaapi.cloud", Method.GET)).join();
-      } catch (CompletionException e) {
-        assertTrue(e.getCause() instanceof TooManyRequestsException);
-        TooManyRequestsException tooManyRequestsError = (TooManyRequestsException) e.getCause();
-        assertEquals("test", tooManyRequestsError.getMessage());
-        assertThat(tooManyRequestsError.metadata).usingRecursiveComparison()
-          .isEqualTo(new TooManyRequestsException.TooManyRequestsExceptionMetadata() {{
-            periodInMinutes = 5;
-            requestsPerPeriodAllowed = 10;
-            recommendedRetryTime = new IsoTime("2020-04-15T02:45:06.521Z");
-        }});
-        throw e;
-      }
-    });
+    Mockito.when(httpClient.makeRequest(Mockito.any()))
+      .thenReturn(CompletableFuture.completedFuture(httpErrorResponse1))
+      .thenReturn(CompletableFuture.completedFuture(httpErrorResponse2))
+      .thenReturn(CompletableFuture.completedFuture(httpOkResponse));
+    String body = httpClient.request(requestOpts).join();
+    assertEquals("response", body);
+    Mockito.verify(httpClient, Mockito.times(3)).makeRequest(Mockito.any());
+  }
+  
+  /**
+   * Tests {@link HttpClient#request(HttpRequestOptions)}
+   */
+  @Test
+  public void testReturnsErrorIfRecommendedRetryTimeIsTooLong() {
+    HttpResponse<String> httpErrorResponse1 = getTooManyRequestsError(2);
+    HttpResponse<String> httpErrorResponse2 = getTooManyRequestsError(300);
+    HttpResponse<String> httpOkResponse = getHttpOkResponse();
+    httpClient = Mockito.spy(HttpClient.class);
+    Mockito.when(httpClient.makeRequest(Mockito.any()))
+      .thenReturn(CompletableFuture.completedFuture(httpErrorResponse1))
+      .thenReturn(CompletableFuture.completedFuture(httpErrorResponse2))
+      .thenReturn(CompletableFuture.completedFuture(httpOkResponse));
+    try {
+      String response = httpClient.request(requestOpts).join();
+      assertNull(response);
+    } catch (Throwable err) {
+      assertTrue(err.getCause() instanceof TooManyRequestsException);
+      assertEquals("test", err.getCause().getMessage());
+      
+    }
+    Mockito.verify(httpClient, Mockito.times(2)).makeRequest(Mockito.any());
+  }
+  
+  /**
+   * Tests {@link HttpClient#request(HttpRequestOptions)}
+   */
+  @Test
+  public void testDoesNotCountsRetryingTooManyRequestsError() {
+    HttpResponse<String> httpErrorResponse1 = getTooManyRequestsError(1);
+    CompletableFuture<HttpResponse<String>> httpErrorResponse2 = new CompletableFuture<>();
+    httpErrorResponse2.completeExceptionally(new Exception("test"));
+    HttpResponse<String> httpOkResponse = getHttpOkResponse();
+    httpClient = Mockito.spy(new HttpClient(60000, 60000, new RetryOptions() {{ retries = 1; }}));
+    Mockito.when(httpClient.makeRequest(Mockito.any()))
+      .thenReturn(CompletableFuture.completedFuture(httpErrorResponse1))
+      .thenReturn(httpErrorResponse2)
+      .thenReturn(CompletableFuture.completedFuture(httpOkResponse));
+    String body = httpClient.request(requestOpts).join();
+    assertEquals("response", body);
+    Mockito.verify(httpClient, Mockito.times(3)).makeRequest(Mockito.any());
+  }
+  
+  @SuppressWarnings("unchecked")
+  HttpResponse<String> getHttpRetryResponse(int seconds) {
+    Headers headers = Mockito.mock(Headers.class);
+    Mockito.when(headers.getFirst("retry-after")).thenReturn(String.valueOf(seconds));
+    HttpResponse<String> response = (HttpResponse<String>) Mockito.mock(HttpResponse.class);
+    Mockito.when(response.getStatus()).thenReturn(202);
+    Mockito.when(response.getHeaders()).thenReturn(headers);
+    return response;
+  }
+  
+  /**
+   * Tests {@link HttpClient#request(HttpRequestOptions)}
+   */
+  @Test
+  public void testWaitsForTheRetryAfterHeaderTimeBeforeRetrying() {
+    HttpResponse<String> retryResponse = getHttpRetryResponse(3);
+    HttpResponse<String> httpOkResponse = getHttpOkResponse();
+    httpClient = Mockito.spy(new HttpClient(60000, 60000, new RetryOptions() {{ retries = 1; }}));
+    Mockito.when(httpClient.makeRequest(Mockito.any()))
+      .thenReturn(CompletableFuture.completedFuture(retryResponse))
+      .thenReturn(CompletableFuture.completedFuture(retryResponse))
+      .thenReturn(CompletableFuture.completedFuture(httpOkResponse));
+    String body = httpClient.request(requestOpts).join();
+    assertEquals("response", body);
+    Mockito.verify(httpClient, Mockito.times(3)).makeRequest(Mockito.any());
+  }
+  
+  /**
+   * Tests {@link HttpClient#request(HttpRequestOptions)}
+   */
+  @Test
+  public void testReturnsTimeoutErrorIfRetryAfterHeaderTimeIsTooLong() {
+    HttpResponse<String> retryResponse = getHttpRetryResponse(30);
+    httpClient = Mockito.spy(new HttpClient(60000, 60000, new RetryOptions() {{ maxDelayInSeconds = 3; }}));
+    Mockito.when(httpClient.makeRequest(Mockito.any())).thenReturn(CompletableFuture.completedFuture(retryResponse));
+    try {
+      httpClient.request(requestOpts).join();
+      fail();
+    } catch (Throwable err) {
+      assertTrue(err.getCause() instanceof TimeoutException);
+      assertEquals("Timed out waiting for the end of the process of calculating metrics", err.getCause().getMessage());
+    }
+    Mockito.verify(httpClient, Mockito.times(1)).makeRequest(Mockito.any());
+  }
+  
+  /**
+   * Tests {@link HttpClient#request(HttpRequestOptions)}
+   */
+  @Test
+  public void testReturnsTimeoutErrorIfTimedOutToRetry() {
+    HttpResponse<String> retryResponse = getHttpRetryResponse(1);
+    httpClient = Mockito.spy(new HttpClient(60000, 60000, new RetryOptions() {{ maxDelayInSeconds = 2; retries = 3; }}));
+    Mockito.when(httpClient.makeRequest(Mockito.any())).thenReturn(CompletableFuture.completedFuture(retryResponse));
+    try {
+      httpClient.request(requestOpts).join();
+      fail();
+    } catch (Throwable err) {
+      assertTrue(err.getCause() instanceof TimeoutException);
+      assertEquals("Timed out waiting for the end of the process of calculating metrics", err.getCause().getMessage());
+    }
+    Mockito.verify(httpClient, Mockito.times(6)).makeRequest(Mockito.any());
   }
 }

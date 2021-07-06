@@ -1,12 +1,14 @@
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import cloud.metaapi.sdk.clients.copy_factory.ConfigurationClient;
+import cloud.metaapi.sdk.clients.copy_factory.models.CopyFactoryAccount;
 import cloud.metaapi.sdk.clients.copy_factory.models.CopyFactoryAccountUpdate;
+import cloud.metaapi.sdk.clients.copy_factory.models.CopyFactoryStrategy;
 import cloud.metaapi.sdk.clients.copy_factory.models.CopyFactoryStrategySubscription;
 import cloud.metaapi.sdk.clients.copy_factory.models.CopyFactoryStrategyUpdate;
-import cloud.metaapi.sdk.clients.copy_factory.models.StrategyId;
 import cloud.metaapi.sdk.copy_factory.CopyFactory;
 import cloud.metaapi.sdk.meta_api.MetaApi;
 import cloud.metaapi.sdk.meta_api.MetatraderAccount;
@@ -40,24 +42,46 @@ public class CopyFactoryExample {
       }
       
       ConfigurationClient configurationApi = copyFactory.getConfigurationApi();
-      String masterAccountId = configurationApi.generateAccountId();
-      String slaveAccountId = configurationApi.generateAccountId();
+      List<CopyFactoryAccount> copyfactoryAccounts = configurationApi.getAccounts().join();
+      Optional<CopyFactoryAccount> masterAccount = copyfactoryAccounts.stream()
+        .filter(a -> a.connectionId.equals(masterMetaapiAccount.getId())).findFirst();
+      if (masterAccount.isPresent()) {
+        masterAccountId = masterAccount.get()._id;
+      } else {
+        masterAccountId = configurationApi.generateAccountId();
+      }
       configurationApi.updateAccount(masterAccountId, new CopyFactoryAccountUpdate() {{
         name = "Demo master account";
         connectionId = masterMetaapiAccount.getId();
         subscriptions = new ArrayList<>();
       }}).join();
       
+      List<CopyFactoryStrategy> strategies = configurationApi.getStrategies().join();
+      Optional<CopyFactoryStrategy> strategy = strategies.stream()
+        .filter(a -> a.connectionId.equals(masterMetaapiAccount.getId())).findFirst();
+      String strategyId;
+      if (strategy.isPresent()) {
+        strategyId = strategy.get()._id;
+      } else {
+        strategyId = configurationApi.generateStrategyId().join().id;
+      }
+      
       // create a strategy being copied
-      StrategyId strategyId = configurationApi.generateStrategyId().join();
-      configurationApi.updateStrategy(strategyId.id, new CopyFactoryStrategyUpdate() {{
+      configurationApi.updateStrategy(strategyId, new CopyFactoryStrategyUpdate() {{
         name = "Test strategy";
         description = "Some useful description about your strategy";
         connectionId = masterMetaapiAccount.getId();
       }}).join();
       
+      Optional<CopyFactoryAccount> slaveAccount = copyfactoryAccounts.stream()
+        .filter(a -> a.connectionId.equals(slaveMetaapiAccount.getId())).findFirst();
+      if (slaveAccount.isPresent()) {
+        configurationApi.removeAccount(slaveAccount.get()._id).join();
+      }
+      slaveAccountId = configurationApi.generateAccountId();
+      
       // subscribe slave CopyFactory accounts to the strategy
-      String sid = strategyId.id;
+      String sid = strategyId;
       configurationApi.updateAccount(slaveAccountId, new CopyFactoryAccountUpdate() {{
         name = "Demo slave account";
         connectionId = slaveMetaapiAccount.getId();

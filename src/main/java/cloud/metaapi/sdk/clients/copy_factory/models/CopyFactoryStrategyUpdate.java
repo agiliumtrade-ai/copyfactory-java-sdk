@@ -33,11 +33,6 @@ public class CopyFactoryStrategyUpdate {
      */
     public CopyFactoryStrategyCommissionScheme commissionScheme;
     /**
-     * Commission rate the platform charges for strategy copying, applied to commissions charged by provider.
-     * This commission applies only to accounts not managed directly by provider. Should be fraction of 1
-     */
-    public Double platformCommissionRate;
-    /**
      * Optional max risk per trade, expressed as a fraction of 1, or {@code null}. If trade has a SL, the trade size
      * will be adjusted to match the risk limit. If not, the trade SL will be applied according to the risk limit
      */
@@ -96,13 +91,30 @@ public class CopyFactoryStrategyUpdate {
      */
     public List<CopyFactoryStrategySymbolMapping> symbolMapping;
     /**
-     * If set to balance, the trade size on strategy subscriber will be scaled according to balance to preserve
-     * risk. If value is none, than trade size will be preserved irregardless of the subscriber balance. If value
-     * is contractSize, then trade size will be scaled according to contract size. Default ({@code null}) is balance.
+     * Trade size scaling settings, or {@code null}. By default the trade size on strategy
+     * subscriber side will be scaled according to balance to preserve risk.
      */
-    public String tradeSizeScalingMode;
+    public CopyFactoryStrategyTradeSizeScaling tradeSizeScaling;
     /**
      * Filter which permits the trades only if account equity is greater than balance moving average
      */
     public CopyFactoryStrategyEquityCurveFilter equityCurveFilter;
+    /**
+     * Flag indicating whether stop loss should be copied. Default ({@code null}) is to copy stop loss
+     */
+    public Boolean copyStopLoss;
+    /**
+     * Flag indicating whether take profit should be copied. Default ({@code null}) is to copy take profit
+     */
+    public Boolean copyTakeProfit;
+    /**
+     * Minimum trade volume to copy, or {@code null}.
+     * Trade signals with a smaller volume will not be copied
+     */
+    public Double minTradeVolume;
+    /**
+     * Maximum trade volume to copy, or {@code null}.
+     * Trade signals with a larger volume will be copied with maximum volume instead
+     */
+    public Double maxTradeVolume;
 }
