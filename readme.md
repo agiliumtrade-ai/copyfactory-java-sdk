@@ -63,7 +63,7 @@ If you use Apache Maven, add this to `<dependencies>` in your `pom.xml`:
 <dependency>
   <groupId>cloud.metaapi.sdk</groupId>
   <artifactId>metaapi-java-sdk</artifactId>
-  <version>12.4.0</version>
+  <version>12.3.1</version>
 </dependency>
 ```
 
@@ -74,7 +74,7 @@ We published some code examples in our github repository, namely:
 
 - Java: [https://github.com/agiliumtrade-ai/copyfactory-java-sdk/tree/master/examples](https://github.com/agiliumtrade-ai/copyfactory-java-sdk/tree/master/examples)
 
-Other options can be found on [this page](https://search.maven.org/artifact/cloud.metaapi.sdk/copyfactory-java-sdk/2.1.0/jar).
+Other options can be found on [this page](https://search.maven.org/artifact/cloud.metaapi.sdk/metaapi-java-sdk/12.3.1/jar).
 
 ### Running Java SDK examples
 In order to run Java SDK examples, follow these steps:
