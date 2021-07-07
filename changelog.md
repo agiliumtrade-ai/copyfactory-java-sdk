@@ -1,3 +1,6 @@
+2.1.1
+  - Fixed dependency vulnerabilities
+
 2.1.0
   - breaking change: added option to filter transactions by account id in history API and altered API parameter list as a result
   - handle TooManyRequestsError in HTTP client
