@@ -121,6 +121,7 @@ public class HttpClient {
    * Also see {@link #makeRequest(HttpRequestOptions)} for more information about the result completion cases.
    * @param options request options
    * @param retryCounter retry counter
+   * @param endTime request end time as a timeout
    * @return completable future with request response
    */
   protected CompletableFuture<HttpResponse<String>> makeCheckedRequest(
