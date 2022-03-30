@@ -29,10 +29,11 @@ class TradingClientTest {
     private final static String copyFactoryApiUrl = "https://trading-api-v1.agiliumtrade.agiliumtrade.ai";
     private static ObjectMapper jsonMapper = JsonMapper.getInstance();
     private TradingClient tradingClient;
-    private HttpClientMock httpClient = new HttpClientMock((opts) -> CompletableFuture.completedFuture("empty"));
+    private HttpClientMock httpClient;
     
     @BeforeEach
     void setUp() throws Exception {
+        httpClient = new HttpClientMock((opts) -> CompletableFuture.completedFuture("empty"));
         tradingClient = new TradingClient(httpClient, "header.payload.sign");
     }
     
