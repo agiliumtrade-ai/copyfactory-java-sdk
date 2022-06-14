@@ -1,5 +1,7 @@
 # CopyFactory trade copying API for Java (a member of [metaapi.cloud](https://metaapi.cloud) project)
 
+Note: The Java SDK was updated long time ago and lacks important bugfixes and updates. We plan to update the java SDK soon. Meanwhile we recommend you to use javascript or python SDK instead. 
+
 CopyFactory is a powerful copy trading API which makes developing forex trade copying applications as easy as writing few lines of code.
 
 CopyFactory API is a member of MetaApi project ([https://metaapi.cloud](https://metaapi.cloud)), a powerful cloud forex trading API which supports both MetaTrader 4 and MetaTrader 5 platforms.
