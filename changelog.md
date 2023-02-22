@@ -1,3 +1,6 @@
+3.0.2
+  - update package info
+
 3.0.1
   - fixed dependency vulnerabilities
 
