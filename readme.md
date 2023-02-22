@@ -1,5 +1,7 @@
 # CopyFactory trade copying API for Java (a member of [metaapi.cloud](https://metaapi.cloud) project)
 
+Note: The Java SDK was updated long time ago and lacks important bugfixes and updates. We plan to update the java SDK soon. Meanwhile we recommend you to use javascript or python SDK instead. 
+
 CopyFactory is a powerful copy trading API which makes developing forex trade copying applications as easy as writing few lines of code.
 
 CopyFactory API is a member of MetaApi project ([https://metaapi.cloud](https://metaapi.cloud)), a powerful cloud forex trading API which supports both MetaTrader 4 and MetaTrader 5 platforms.
@@ -63,18 +65,16 @@ If you use Apache Maven, add this to `<dependencies>` in your `pom.xml`:
 <dependency>
   <groupId>cloud.metaapi.sdk</groupId>
   <artifactId>metaapi-java-sdk</artifactId>
-  <version>13.2.0</version>
+  <version>14.0.0</version>
 </dependency>
 ```
 
-Other options can be found on [this page](https://search.maven.org/artifact/cloud.metaapi.sdk/metaapi-java-sdk/13.2.0/jar).
+Other options can be found on [this page](https://search.maven.org/artifact/cloud.metaapi.sdk/metaapi-java-sdk/14.0.0/jar).
 
 ## Code examples
 We published some code examples in our github repository, namely:
 
 - Java: [https://github.com/agiliumtrade-ai/copyfactory-java-sdk/tree/master/examples](https://github.com/agiliumtrade-ai/copyfactory-java-sdk/tree/master/examples)
-
-Other options can be found on [this page](https://search.maven.org/artifact/cloud.metaapi.sdk/metaapi-java-sdk/12.3.1/jar).
 
 ### Running Java SDK examples
 In order to run Java SDK examples, follow these steps:

@@ -4,7 +4,7 @@
 
   <groupId>cloud.metaapi.sdk</groupId>
   <artifactId>copyfactory-java-sdk</artifactId>
-  <version>2.1.1</version>
+  <version>3.0.1</version>
   <packaging>jar</packaging>
 
   <name>${project.groupId}:${project.artifactId}</name>
@@ -175,21 +175,6 @@
 	  <version>3.4.6</version>
 	  <scope>test</scope>
 	</dependency>
-	<dependency>
-	  <groupId>com.konghq</groupId>
-	  <artifactId>unirest-java</artifactId>
-	  <version>3.11.10</version>
-	</dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-      <version>2.11.1</version>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.datatype</groupId>
-      <artifactId>jackson-datatype-jdk8</artifactId>
-      <version>2.11.1</version>
-    </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
@@ -204,6 +189,11 @@
       <groupId>io.github.cdimascio</groupId>
       <artifactId>java-dotenv</artifactId>
       <version>5.2.2</version>
+    </dependency>
+    <dependency>
+      <groupId>cloud.metaapi.sdk</groupId>
+      <artifactId>metaapi-common-java</artifactId>
+      <version>[1.0.1,)</version>
     </dependency>
   </dependencies>
 </project>
